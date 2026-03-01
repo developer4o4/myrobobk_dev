@@ -30,6 +30,7 @@ services:
       - ../../../.env
     volumes:
       - ../../../backend:/app
+      - media_data:/app/media
       - judge_runs:/judge_runs
     ports:
       - "7712:7712"
@@ -50,4 +51,5 @@ services:
 volumes:
   db_data:
   dind_data:
+  media_data:
   judge_runs:
