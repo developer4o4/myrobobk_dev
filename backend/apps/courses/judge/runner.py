@@ -80,7 +80,7 @@ def run_in_sandbox(language: str, source_code: str, input_data: str) -> RunResul
         # =====================
         # 3. docker run command
         # =====================
-
+        print("RUNNER_LOADED_V2", DOCKER_HOST, DOCKER_IMAGE)
         cmd = _docker_cmd() + [
 
             "run",
