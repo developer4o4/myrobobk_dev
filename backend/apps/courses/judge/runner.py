@@ -1,14 +1,17 @@
 import os
 import subprocess
-import tempfile
 import uuid
 from dataclasses import dataclass
 
 DOCKER_HOST = os.getenv("DOCKER_HOST", "tcp://dind:2375").strip()
-DOCKER_IMAGE = os.getenv("JUDGE_IMAGE", "judge-sandbox:latest")
+DOCKER_IMAGE = os.getenv("JUDGE_IMAGE", "judge-sandbox:latest").strip()
 
-# judge_runs volume siz compose'da bergan:
+# container ichidagi path
 RUNS_DIR = "/judge_runs"
+# docker volume nomi (compose'dagi volumes: judge_runs:)
+RUNS_VOLUME = os.getenv("JUDGE_RUNS_VOLUME", "judge_runs").strip()
+
+TIMEOUT_SECONDS = int(os.getenv("JUDGE_TIMEOUT_SECONDS", "5"))
 
 
 @dataclass
@@ -20,135 +23,66 @@ class RunResult:
 
 
 def _docker_cmd():
-    """
-    Always connect to dind daemon
-    """
     return ["docker", "-H", DOCKER_HOST]
 
 
 def run_in_sandbox(language: str, source_code: str, input_data: str) -> RunResult:
-
     run_id = str(uuid.uuid4())
-    workdir = os.path.join(RUNS_DIR, run_id)
+    workdir = f"{RUNS_DIR}/{run_id}"
 
+    # 1) Fayllarni yozish: buni web konteynerning /judge_runs ichiga yozamiz.
     os.makedirs(workdir, exist_ok=True)
 
+    if language == "py":
+        filename = "main.py"
+    elif language == "c":
+        filename = "main.c"
+    elif language == "cpp":
+        filename = "main.cpp"
+    else:
+        return RunResult(False, "", "Unsupported language", False)
+
+    with open(f"{workdir}/{filename}", "w", encoding="utf-8") as f:
+        f.write(source_code)
+
+    with open(f"{workdir}/input.txt", "w", encoding="utf-8") as f:
+        f.write(input_data or "")
+
+    # 2) Container ichida run command
+    if language == "py":
+        run_cmd = f"python3 {filename} < input.txt"
+    elif language == "c":
+        run_cmd = f"gcc {filename} -O2 -pipe -static -s -o app && ./app < input.txt"
+    else:  # cpp
+        run_cmd = f"g++ {filename} -O2 -pipe -static -s -o app && ./app < input.txt"
+
+    # 3) docker run: ABSOLUTE PATH emas, NAMED VOLUME bilan mount qilamiz
+    cmd = _docker_cmd() + [
+        "run",
+        "--rm",
+        "--network", "none",
+        "-v", f"{RUNS_VOLUME}:{RUNS_DIR}",
+        "-w", workdir,
+        DOCKER_IMAGE,
+        "sh", "-lc", run_cmd,
+    ]
+
     try:
-
-        # =====================
-        # 1. write source file
-        # =====================
-
-        if language == "py":
-            filename = "main.py"
-
-        elif language == "c":
-            filename = "main.c"
-
-        elif language == "cpp":
-            filename = "main.cpp"
-
-        else:
-            return RunResult(False, "", "Unsupported language", False)
-
-        source_path = os.path.join(workdir, filename)
-
-        with open(source_path, "w") as f:
-            f.write(source_code)
-
-        input_path = os.path.join(workdir, "input.txt")
-
-        with open(input_path, "w") as f:
-            f.write(input_data)
-
-        # =====================
-        # 2. build command inside container
-        # =====================
-
-        if language == "py":
-
-            run_cmd = f"python {filename} < input.txt"
-
-        elif language == "c":
-
-            run_cmd = f"gcc {filename} -o app && ./app < input.txt"
-
-        elif language == "cpp":
-
-            run_cmd = f"g++ {filename} -o app && ./app < input.txt"
-
-        # =====================
-        # 3. docker run command
-        # =====================
-        print("RUNNER_LOADED_V2", DOCKER_HOST, DOCKER_IMAGE)
-        cmd = _docker_cmd() + [
-
-            "run",
-
-            "--rm",
-
-            "--network", "none",
-
-            "-v", f"{RUNS_DIR}:{RUNS_DIR}",
-
-            "-w", workdir,
-
-            DOCKER_IMAGE,
-
-            "sh",
-
-            "-c",
-
-            run_cmd
-
-        ]
-
-        try:
-
-            p = subprocess.run(
-
-                cmd,
-
-                stdout=subprocess.PIPE,
-
-                stderr=subprocess.PIPE,
-
-                timeout=5,
-
-                text=True
-
-            )
-
-            return RunResult(
-
-                ok=(p.returncode == 0),
-
-                stdout=p.stdout,
-
-                stderr=p.stderr,
-
-                timeout=False
-
-            )
-
-        except subprocess.TimeoutExpired as e:
-
-            return RunResult(
-
-                ok=False,
-
-                stdout="",
-
-                stderr="Time limit exceeded",
-
-                timeout=True
-
-            )
-
+        p = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=TIMEOUT_SECONDS,
+            text=True,
+        )
+        return RunResult(
+            ok=(p.returncode == 0),
+            stdout=p.stdout or "",
+            stderr=p.stderr or "",
+            timeout=False,
+        )
+    except subprocess.TimeoutExpired:
+        return RunResult(False, "", "Time limit exceeded", True)
     finally:
-
-        # clean files
-        try:
-            subprocess.run(["rm", "-rf", workdir])
-        except:
-            pass
+        # cleanup: web konteynerning volume ichidan o'chiramiz
+        subprocess.run(["sh", "-lc", f"rm -rf {workdir}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
