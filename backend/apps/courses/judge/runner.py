@@ -1,85 +1,154 @@
-import os, subprocess, uuid, shutil
-from pathlib import Path
+import os
+import subprocess
 import tempfile
+import uuid
 from dataclasses import dataclass
+
+DOCKER_HOST = os.getenv("DOCKER_HOST", "tcp://dind:2375").strip()
+DOCKER_IMAGE = os.getenv("JUDGE_IMAGE", "judge-sandbox:latest")
+
+# judge_runs volume siz compose'da bergan:
+RUNS_DIR = "/judge_runs"
+
 
 @dataclass
 class RunResult:
     ok: bool
     stdout: str
     stderr: str
-    exit_code: int
-    timeout: bool = False
+    timeout: bool
 
-def _docker_run(cmd: list[str], timeout_sec: int = 3) -> RunResult:
-    try:
-        p = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_sec)
-        return RunResult(ok=(p.returncode == 0), stdout=p.stdout, stderr=p.stderr, exit_code=p.returncode)
-    except subprocess.TimeoutExpired as e:
-        return RunResult(ok=False, stdout=e.stdout or "", stderr=e.stderr or "timeout", exit_code=124, timeout=True)
+
+def _docker_cmd():
+    """
+    Always connect to dind daemon
+    """
+    return ["docker", "-H", DOCKER_HOST]
+
 
 def run_in_sandbox(language: str, source_code: str, input_data: str) -> RunResult:
-    if not shutil.which("docker"):
-        return RunResult(False, "", "Docker CLI topilmadi", 1)
 
-    sandbox_image = "judge-sandbox:latest"
-    job_id = str(uuid.uuid4())
-    base_dir = Path("/judge_runs")
-    base_dir.mkdir(parents=True, exist_ok=True)
+    run_id = str(uuid.uuid4())
+    workdir = os.path.join(RUNS_DIR, run_id)
 
-    td = base_dir / job_id
-    td.mkdir(parents=True, exist_ok=True)
+    os.makedirs(workdir, exist_ok=True)
+
     try:
+
+        # =====================
+        # 1. write source file
+        # =====================
+
         if language == "py":
-            src_name = "main.py"
+            filename = "main.py"
+
         elif language == "c":
-            src_name = "main.c"
+            filename = "main.c"
+
         elif language == "cpp":
-            src_name = "main.cpp"
+            filename = "main.cpp"
+
         else:
-            return RunResult(False, "", "Unsupported language", 1)
+            return RunResult(False, "", "Unsupported language", False)
 
-        (td / src_name).write_text(source_code, encoding="utf-8")
-        (td / "input.txt").write_text(input_data or "", encoding="utf-8")
+        source_path = os.path.join(workdir, filename)
 
-        os.chmod(td, 0o777)
-        os.chmod(td / src_name, 0o666)
-        os.chmod(td / "input.txt", 0o666)
-        base = [
-            "docker", "run", "--rm",
+        with open(source_path, "w") as f:
+            f.write(source_code)
+
+        input_path = os.path.join(workdir, "input.txt")
+
+        with open(input_path, "w") as f:
+            f.write(input_data)
+
+        # =====================
+        # 2. build command inside container
+        # =====================
+
+        if language == "py":
+
+            run_cmd = f"python {filename} < input.txt"
+
+        elif language == "c":
+
+            run_cmd = f"gcc {filename} -o app && ./app < input.txt"
+
+        elif language == "cpp":
+
+            run_cmd = f"g++ {filename} -o app && ./app < input.txt"
+
+        # =====================
+        # 3. docker run command
+        # =====================
+
+        cmd = _docker_cmd() + [
+
+            "run",
+
+            "--rm",
+
             "--network", "none",
-            "--memory", "256m",
-            "--cpus", "0.5",
-            "--pids-limit", "64",
-            "--read-only",
 
-            "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
+            "-v", f"{RUNS_DIR}:{RUNS_DIR}",
 
-            "-v", f"{td.as_posix()}:/work:rw",
-            "-w", "/work",
-            sandbox_image,
-            "bash", "-lc",
+            "-w", workdir,
+
+            DOCKER_IMAGE,
+
+            "sh",
+
+            "-c",
+
+            run_cmd
+
         ]
 
-        if language == "py":
-            script = "python3 main.py < input.txt"
-        elif language == "c":
-            script = "gcc -O2 -std=c11 main.c -o app && ./app < input.txt"
-        if language == "cpp":
-            compile_cmd = "g++ -O2 -pipe -std=c++17 main.cpp -o app"
-            r1 = _docker_run(base + [compile_cmd], timeout_sec=15)
-            if not r1.ok:
-                return r1
-            run_cmd = "./app < input.txt"
-            return _docker_run(base + [run_cmd], timeout_sec=3)
+        try:
 
-        return _docker_run(base + [script], timeout_sec=5)
+            p = subprocess.run(
+
+                cmd,
+
+                stdout=subprocess.PIPE,
+
+                stderr=subprocess.PIPE,
+
+                timeout=5,
+
+                text=True
+
+            )
+
+            return RunResult(
+
+                ok=(p.returncode == 0),
+
+                stdout=p.stdout,
+
+                stderr=p.stderr,
+
+                timeout=False
+
+            )
+
+        except subprocess.TimeoutExpired as e:
+
+            return RunResult(
+
+                ok=False,
+
+                stdout="",
+
+                stderr="Time limit exceeded",
+
+                timeout=True
+
+            )
 
     finally:
-        # tozalash (xohlasangiz saqlab ham qo'yishingiz mumkin)
+
+        # clean files
         try:
-            for p in td.iterdir():
-                p.unlink(missing_ok=True)
-            td.rmdir()
-        except Exception:
+            subprocess.run(["rm", "-rf", workdir])
+        except:
             pass
