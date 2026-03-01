@@ -37,7 +37,11 @@ services:
     depends_on:
       - db
       - dind
-
+  judge_image:
+    build:
+      context: ../../../backend/apps/courses/judge
+      dockerfile: Dockerfile
+    image: judge-sandbox:latest
   bot:
     build:
       context: ../../../bot
