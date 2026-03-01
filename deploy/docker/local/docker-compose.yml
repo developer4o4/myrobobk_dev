@@ -25,14 +25,14 @@ services:
     build:
       context: ../../../backend
       dockerfile: Dockerfile
-    command: python manage.py runserver 0.0.0.0:8000
+    command: python manage.py runserver 0.0.0.0:7712
     env_file:
       - ../../../.env
     volumes:
       - ../../../backend:/app
       - judge_runs:/judge_runs
     ports:
-      - "8000:8000"
+      - "7712:7712"
     depends_on:
       - db
       - dind

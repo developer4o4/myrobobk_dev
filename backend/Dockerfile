@@ -8,4 +8,4 @@ COPY requirements /app/requirements
 RUN pip install --upgrade pip && pip install -r requirements/base.txt
 
 COPY . /app
-CMD ["gunicorn","config.wsgi:application","--bind","0.0.0.0:8000"]
+CMD ["gunicorn","config.wsgi:application","--bind","0.0.0.0:7712"]
