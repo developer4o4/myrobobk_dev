@@ -27,7 +27,6 @@ class TeacherAdmin(admin.ModelAdmin):
 
     readonly_fields = ("slug", "image_preview", "courses_count")
 
-    prepopulated_fields = {"slug": ("username",)}
     ordering = ("-created_at",)
     list_per_page = 25
 
