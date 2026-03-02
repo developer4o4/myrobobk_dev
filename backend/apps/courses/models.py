@@ -12,7 +12,6 @@ class Course(BaseModel):
     about = models.TextField(blank=True)
     image = models.ImageField(upload_to="courses/images/", blank=True, null=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    is_bought = models.BooleanField(default=False)
 
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -37,7 +36,7 @@ class CoursePurchase(BaseModel):
 
     def __str__(self):
         return f"{self.user_id} -> {self.course_id}"
-        
+
 class Section(BaseModel):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="sections")
     title = models.CharField(max_length=255)
