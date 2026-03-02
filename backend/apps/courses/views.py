@@ -5,7 +5,7 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView, get_object_or_
 from django.db.models import Count, Q
 from django.utils import timezone
 from apps.courses.models import Course, Topic, CourseSubscription
-from apps.courses.serializers import CourseSerializer, TopicSerializer, BuyCourseSerializer
+from apps.courses.serializers import CourseSerializer, TopicSerializer, BuyCourseSerializer, MyCourseSerializer
 from apps.courses.permissions import HasActiveCourseSubscription
 class CourseListView(ListAPIView):
     serializer_class = CourseSerializer
@@ -63,3 +63,18 @@ class TopicDetailView(RetrieveAPIView):
     queryset = Topic.objects.select_related("section__course")
     serializer_class = TopicSerializer
     permission_classes = [permissions.IsAuthenticated, HasActiveCourseSubscription]
+
+
+class MyPurchasedCoursesView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        subs = (
+            CourseSubscription.objects
+            .filter(user=request.user, active=True, expires_at__gt=timezone.now())
+            .select_related("course")
+            .order_by("-expires_at")
+        )
+        courses = [s.course for s in subs]
+        data = MyCourseSerializer(courses, many=True, context={"request": request}).data
+        return Response(data)

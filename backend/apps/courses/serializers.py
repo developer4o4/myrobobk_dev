@@ -25,3 +25,7 @@ class TopicSerializer(serializers.ModelSerializer):
 class BuyCourseSerializer(serializers.Serializer):
     course_id = serializers.UUIDField()
 
+class MyCourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields = ["id", "title", "about", "image", "price"]
