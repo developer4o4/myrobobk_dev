@@ -7,7 +7,6 @@ class CourseSerializer(serializers.ModelSerializer):
     buyers_active = serializers.IntegerField(read_only=True)
     sections_count = serializers.IntegerField(read_only=True)
     topics_count = serializers.IntegerField(read_only=True)
-
     class Meta:
         model = Course
         fields = (

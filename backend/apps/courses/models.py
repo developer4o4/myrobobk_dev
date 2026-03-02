@@ -12,6 +12,7 @@ class Course(BaseModel):
     about = models.TextField(blank=True)
     image = models.ImageField(upload_to="courses/images/", blank=True, null=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    is_bought = models.BooleanField(default=False)
 
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -163,7 +164,7 @@ class CourseSubscription(BaseModel):
         """
         from django.apps import apps
         UserModel = apps.get_model(*User.split(".")) if "." in User else apps.get_model("users", "User")
-
+        
         with transaction.atomic():
             u = UserModel.objects.select_for_update().get(pk=user.pk)
             price = Decimal(course.price)
@@ -193,5 +194,6 @@ class CourseSubscription(BaseModel):
                 sub.expires_at = add_one_month(base)
                 sub.last_billed_at = now
                 sub.save(update_fields=["active", "expires_at", "last_billed_at"])
-
+            course.is_bought = True
+            course.save(update_fields=["is_bought"])
             return sub
