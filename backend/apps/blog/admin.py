@@ -35,11 +35,7 @@ class BlogAdmin(admin.ModelAdmin):
         "views",
         "image_preview",
     )
-
-    prepopulated_fields = {
-        "slug": ("title",)
-    }
-
+    
     ordering = (
         "-created_at",
     )
