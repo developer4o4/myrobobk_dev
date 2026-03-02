@@ -18,15 +18,37 @@ class CourseSerializer(serializers.ModelSerializer):
             "is_bought",
         )
 
-
-        
+class ProblemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Problem
+        fields = (
+            "title",
+            "statement",
+            "sample_input",
+            "sample_output",
+        )
 class TopicSerializer(serializers.ModelSerializer):
     is_code = serializers.BooleanField(read_only=True)
 
+    problem = serializers.SerializerMethodField()
+
     class Meta:
         model = Topic
-        fields = ("id", "title", "about", "video_url", "topic_type", "is_code", "order")
+        fields = (
+            "id",
+            "title",
+            "about",
+            "video_url",
+            "topic_type",
+            "is_code",
+            "order",
+            "problem",
+        )
 
+    def get_problem(self, obj):
+        if obj.topic_type == "code" and hasattr(obj, "problem"):
+            return ProblemSerializer(obj.problem).data
+        return None
 class BuyCourseSerializer(serializers.Serializer):
     course_id = serializers.UUIDField()
 
