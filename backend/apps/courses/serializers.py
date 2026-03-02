@@ -12,7 +12,7 @@ class CourseSerializer(serializers.ModelSerializer):
         fields = (
             "id", "title", "about", "image", "price", "is_active",
             "buyers_total", "buyers_active",
-            "sections_count", "topics_count",
+            "sections_count", "topics_count","is_bought"
         )
 class TopicSerializer(serializers.ModelSerializer):
     is_code = serializers.BooleanField(read_only=True)
