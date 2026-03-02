@@ -7,13 +7,19 @@ class CourseSerializer(serializers.ModelSerializer):
     buyers_active = serializers.IntegerField(read_only=True)
     sections_count = serializers.IntegerField(read_only=True)
     topics_count = serializers.IntegerField(read_only=True)
+    is_bought = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = Course
         fields = (
             "id", "title", "about", "image", "price", "is_active",
             "buyers_total", "buyers_active",
-            "sections_count", "topics_count","is_bought"
+            "sections_count", "topics_count",
+            "is_bought",
         )
+
+
+        
 class TopicSerializer(serializers.ModelSerializer):
     is_code = serializers.BooleanField(read_only=True)
 

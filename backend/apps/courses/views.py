@@ -1,12 +1,13 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import permissions
+from rest_framework import permissions, status
 from rest_framework.generics import ListAPIView, RetrieveAPIView, get_object_or_404
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Exists, OuterRef, Value, BooleanField
 from django.utils import timezone
 from apps.courses.models import Course, Topic, CourseSubscription
 from apps.courses.serializers import CourseSerializer, TopicSerializer, BuyCourseSerializer, MyCourseSerializer
 from apps.courses.permissions import HasActiveCourseSubscription
+
 class CourseListView(ListAPIView):
     serializer_class = CourseSerializer
     permission_classes = [permissions.AllowAny]
@@ -14,11 +15,11 @@ class CourseListView(ListAPIView):
     def get_queryset(self):
         now = timezone.now()
 
-        return (
+        qs = (
             Course.objects
             .filter(is_active=True)
             .annotate(
-                # Kursni hech bo'lmaganda 1 marta sotib olgan userlar soni
+                # Kursni hech bo‘lmaganda 1 marta sotib olgan userlar soni
                 buyers_total=Count("subscriptions__user", distinct=True),
 
                 # Hozir aktiv userlar soni
@@ -28,14 +29,29 @@ class CourseListView(ListAPIView):
                     distinct=True
                 ),
 
-                # Bo'limlar soni
+                # Bo‘limlar soni
                 sections_count=Count("sections", distinct=True),
 
-                # Mavzular soni (Course -> Section -> Topic)
+                # Mavzular soni
                 topics_count=Count("sections__topics", distinct=True),
             )
             .order_by("-created_at")
         )
+
+        # ✅ request.user bo‘yicha is_bought
+        user = getattr(self.request, "user", None)
+        if user and user.is_authenticated:
+            active_sub_qs = CourseSubscription.objects.filter(
+                user=user,
+                course=OuterRef("pk"),
+                active=True,
+                expires_at__gt=now,
+            )
+            qs = qs.annotate(is_bought=Exists(active_sub_qs))
+        else:
+            qs = qs.annotate(is_bought=Value(False, output_field=BooleanField()))
+
+        return qs
 
 class BuyCourseView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -49,14 +65,21 @@ class BuyCourseView(APIView):
         try:
             sub = CourseSubscription.start_or_renew(request.user, course)
         except ValueError:
-            return Response({"detail": "Balans yetarli emas."}, status=402)
+            # 402 ishlatsa ham bo‘ladi, lekin ko‘p API’lar 400/403 qaytaradi
+            return Response(
+                {"detail": "Balans yetarli emas."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        return Response({
-            "ok": True,
-            "course_id": course.id,
-            "expires_at": sub.expires_at,
-            "active": sub.active
-        })
+        return Response(
+            {
+                "ok": True,
+                "course_id": str(course.id),
+                "expires_at": sub.expires_at,
+                "active": sub.active,
+            },
+            status=status.HTTP_200_OK
+        )
 
 
 class TopicDetailView(RetrieveAPIView):

@@ -21,6 +21,23 @@ class Course(BaseModel):
         return self.title
 
 
+class CoursePurchase(BaseModel):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="course_purchases")
+    course = models.ForeignKey("courses.Course", on_delete=models.CASCADE, related_name="purchases")
+
+    is_active = models.BooleanField(default=True)  # obuna aktivmi (agar vaqtli bo‘lsa)
+    bought_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "course")
+        indexes = [
+            models.Index(fields=["user", "course"]),
+            models.Index(fields=["user", "is_active"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} -> {self.course_id}"
+        
 class Section(BaseModel):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="sections")
     title = models.CharField(max_length=255)
