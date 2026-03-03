@@ -210,6 +210,5 @@ class CourseSubscription(BaseModel):
                 sub.expires_at = add_one_month(base)
                 sub.last_billed_at = now
                 sub.save(update_fields=["active", "expires_at", "last_billed_at"])
-            course.is_bought = True
-            course.save(update_fields=["is_bought"])
+            
             return sub
