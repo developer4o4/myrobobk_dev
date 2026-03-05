@@ -1,56 +1,29 @@
 from django.contrib import admin
-from django.utils.html import format_html
+from .models import Category, Blog, Comment
 
-from .models import Blog
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ("id", "title", "slug", "created_at")
+    search_fields = ("title",)
+
+
+class CommentInline(admin.TabularInline):
+    model = Comment
+    extra = 0
+    readonly_fields = ("user", "created_at")
 
 
 @admin.register(Blog)
 class BlogAdmin(admin.ModelAdmin):
-
-    list_display = (
-        "title",
-        "image_preview",
-        "views",
-        "created_at",
-        "is_active",
-    )
-
-    list_display_links = (
-        "title",
-        "image_preview",
-    )
-
-    search_fields = (
-        "title",
-        "description",
-    )
-
-    list_filter = (
-        "is_active",
-        "created_at",
-    )
-
-    readonly_fields = (
-        "slug",
-        "views",
-        "image_preview",
-    )
-    
-    ordering = (
-        "-created_at",
-    )
-
-    list_per_page = 20
+    list_display = ("id", "title", "category", "views", "created_at")
+    list_filter = ("category",)
+    search_fields = ("title", "description")
+    inlines = [CommentInline]
 
 
-    def image_preview(self, obj):
-
-        if obj.img:
-            return format_html(
-                '<img src="{}" width="80" style="border-radius:5px;" />',
-                obj.img.url
-            )
-
-        return "-"
-
-    image_preview.short_description = "Image"
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    list_display = ("id", "blog", "user", "created_at")
+    list_filter = ("blog",)
+    search_fields = ("text", "user__username")
