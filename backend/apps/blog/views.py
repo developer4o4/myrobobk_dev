@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from django.shortcuts import get_object_or_404
 
 from .models import Category, Blog, Comment
@@ -8,7 +9,8 @@ from .serializers import (
     CategoryListSerializer,
     BlogListSerializer,
     BlogDetailSerializer,
-    CommentSerializer
+    CommentListSerializer,
+    CommentCreateSerializer
 )
 
 
@@ -51,25 +53,40 @@ class BlogDetailAPIView(APIView):
         ser = BlogDetailSerializer(blog, context={"request": request})
         return Response(ser.data)
 
-
 class BlogCommentsAPIView(APIView):
     """
-    GET /api/blogs/<slug>/comments/
-    Commentlar oxirgi yozilgani birinchi bo'lib chiqadi.
+    GET  /api/blogs/<slug>/comments/  -> list (oxirgisi birinchi)
+    POST /api/blogs/<slug>/comments/  -> create comment (login required)
     """
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
     def get(self, request, slug):
         blog = get_object_or_404(Blog, slug=slug)
 
-        comments = (
+        qs = (
             Comment.objects
             .select_related("user")
             .filter(blog=blog)
             .order_by("-created_at", "-id")
         )
-
-        ser = CommentSerializer(comments, many=True)
+        ser = CommentListSerializer(qs, many=True)
         return Response({
             "blog": {"id": blog.id, "title": blog.title, "slug": blog.slug},
-            "count": comments.count(),
+            "count": qs.count(),
             "results": ser.data
         })
+
+    def post(self, request, slug):
+        blog = get_object_or_404(Blog, slug=slug)
+
+        ser = CommentCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+
+        comment = Comment.objects.create(
+            blog=blog,
+            user=request.user,
+            text=ser.validated_data["text"]
+        )
+
+        out = CommentListSerializer(comment)
+        return Response(out.data, status=status.HTTP_201_CREATED)
