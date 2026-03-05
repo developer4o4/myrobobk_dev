@@ -60,7 +60,8 @@ async def contact_handler(msg: types.Message):
         code = data["code"]
 
         await msg.answer(
-            f"🔑 Login code:\n\n{code}"
+            f"🔑 Login code:\n\n<code>{code}</code>",
+            parse_mode="HTML"
         )
 
     except Exception as e:
