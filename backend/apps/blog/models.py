@@ -11,7 +11,7 @@ class Category(BaseModel):
         if not self.slug: 
             self.slug = slugify(self.title)
         super().save(*args, **kwargs)
-
+    
 
 class Blog(BaseModel):
     category = models.ForeignKey(Category,on_delete=models.SET_NULL, null=True, blank=True)

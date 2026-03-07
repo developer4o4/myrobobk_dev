@@ -62,7 +62,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = "phone"
 
     def __str__(self):
-        return self.phone
+        return self.username
 
 
 
