@@ -157,7 +157,7 @@ class SubmissionAdmin(admin.ModelAdmin):
 class CourseSubscriptionAdmin(admin.ModelAdmin):
     list_display = (
         "id",
-        "user",
+        "user__phone",
         "course",
         "active",
         "started_at",
