@@ -142,7 +142,7 @@ class SubmissionAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at",)
 
     fieldsets = (
-        (None, {"fields": ("user__phone", "problem", "language", "status")}),
+        (None, {"fields": ("user", "problem", "language", "status")}),
         ("Code", {"fields": ("source_code",)}),
         ("Error", {"fields": ("error_message",)}),
         ("Dates", {"fields": ("created_at",)}),
@@ -157,7 +157,7 @@ class SubmissionAdmin(admin.ModelAdmin):
 class CourseSubscriptionAdmin(admin.ModelAdmin):
     list_display = (
         "id",
-        "user__phone",
+        "user",
         "course",
         "active",
         "started_at",
