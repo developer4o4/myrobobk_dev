@@ -142,7 +142,7 @@ class SubmissionAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at",)
 
     fieldsets = (
-        (None, {"fields": ("user", "problem", "language", "status")}),
+        (None, {"fields": ("user__phone", "problem", "language", "status")}),
         ("Code", {"fields": ("source_code",)}),
         ("Error", {"fields": ("error_message",)}),
         ("Dates", {"fields": ("created_at",)}),
