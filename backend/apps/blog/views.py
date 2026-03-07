@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from django.shortcuts import get_object_or_404
-
+from django.db.models import F
 from .models import Category, Blog, Comment
 from .serializers import (
     CategoryListSerializer,
@@ -50,6 +50,8 @@ class BlogDetailAPIView(APIView):
     """
     def get(self, request, slug):
         blog = get_object_or_404(Blog.objects.select_related("category"), slug=slug)
+        Blog.objects.filter(id=blog.id).update(views=F("views") + 1)
+        blog.refresh_from_db()
         ser = BlogDetailSerializer(blog, context={"request": request})
         return Response(ser.data)
 
