@@ -17,7 +17,7 @@ class CommentInline(admin.TabularInline):
 @admin.register(Blog)
 class BlogAdmin(admin.ModelAdmin):
     list_display = ("id", "title", "category", "views", "created_at")
-    list_filter = ("category",)
+    list_filter = ("category", "status")
     search_fields = ("title", "description")
     inlines = [CommentInline]
 

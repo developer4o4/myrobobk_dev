@@ -42,3 +42,15 @@ class CommentCreateSerializer(serializers.ModelSerializer):
         if len(value) < 2:
             raise serializers.ValidationError("Kommentariya juda qisqa.")
         return value
+    
+class BlogCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Blog
+        fields = ["id", "title", "description", "img"]
+
+    def create(self, validated_data):
+        return Blog.objects.create(
+            **validated_data,
+            status=False
+        )

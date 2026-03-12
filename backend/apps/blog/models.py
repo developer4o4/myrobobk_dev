@@ -17,6 +17,7 @@ class Blog(BaseModel):
     category = models.ForeignKey(Category,on_delete=models.SET_NULL, null=True, blank=True)
     title = models.CharField(max_length=255)
     description = models.TextField(max_length=1000)
+    status = models.BooleanField(default=False)
     img = models.FileField(upload_to='blog')
     slug = models.CharField(max_length=255, unique=True, blank=True)
     views = models.IntegerField(default=0)
@@ -44,3 +45,5 @@ class Comment(BaseModel):
     def __str__(self):
         return f"{self.user} - {self.blog.title}"
 
+class Wait_blogs(BaseModel):
+    blog = models.ForeignKey(Blog,on_delete=models.CASCADE)
