@@ -39,7 +39,7 @@ class BlogListAPIView(APIView):
     def get(self, request):
         category_param = request.query_params.get("category")
 
-        qs = Blog.objects.select_related("category").all().order_by("-created_at", "-id")
+        qs = Blog.objects.select_related("category").filter(status=True).order_by("-created_at", "-id")
 
         if category_param:
             # category=slug bo'lishi ham, id bo'lishi ham mumkin
