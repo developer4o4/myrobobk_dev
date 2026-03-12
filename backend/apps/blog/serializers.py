@@ -49,8 +49,4 @@ class BlogCreateSerializer(serializers.ModelSerializer):
         model = Blog
         fields = ["id", "title", "description", "img"]
 
-    def create(self, validated_data):
-        return Blog.objects.create(
-            **validated_data,
-            status=False
-        )
+    
