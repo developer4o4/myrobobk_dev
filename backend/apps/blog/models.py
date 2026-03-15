@@ -1,6 +1,7 @@
 from django.db import models
 from apps.common.models import BaseModel
 from django.utils.text import slugify
+from ckeditor.fields import RichTextField
 from django.conf import settings
 User = settings.AUTH_USER_MODEL
 
@@ -16,7 +17,7 @@ class Category(BaseModel):
 class Blog(BaseModel):
     category = models.ForeignKey(Category,on_delete=models.SET_NULL, null=True, blank=True)
     title = models.CharField(max_length=255)
-    description = models.TextField(max_length=10000)
+    description = RichTextField()
     status = models.BooleanField(default=False)
     img = models.FileField(upload_to='blog')
     slug = models.CharField(max_length=255, unique=True, blank=True)
