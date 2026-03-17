@@ -14,6 +14,7 @@ class TeacherListSerializer(serializers.ModelSerializer):
             "job",
             "direction",
             "experience",
+            "about",
             "work_place",
             "img",
             "slug",
