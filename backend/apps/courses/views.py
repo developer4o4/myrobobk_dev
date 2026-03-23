@@ -13,7 +13,7 @@ class CourseListView(ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        now = timezone.now()
+        now = timezone.now()    
 
         qs = (
             Course.objects

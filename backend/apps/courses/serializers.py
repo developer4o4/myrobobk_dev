@@ -30,7 +30,7 @@ class ProblemSerializer(serializers.ModelSerializer):
 class TopicSerializer(serializers.ModelSerializer):
     is_code = serializers.BooleanField(read_only=True)
 
-    problem = serializers.SerializerMethodField()
+    problem = serializers.SerializerMethodField(many=True)
 
     class Meta:
         model = Topic
