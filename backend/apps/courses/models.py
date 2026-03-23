@@ -79,7 +79,7 @@ class Topic(BaseModel):
 
 class Problem(BaseModel):
     """Faqat Topic.topic_type = code bo'lganda ishlatiladi."""
-    topic = models.OneToOneField(Topic, on_delete=models.CASCADE, related_name="problem")
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="problem")
     title = models.CharField(max_length=255)
     statement = models.TextField()  # masala matni
 
