@@ -29,8 +29,7 @@ class ProblemSerializer(serializers.ModelSerializer):
         )
 class TopicSerializer(serializers.ModelSerializer):
     is_code = serializers.BooleanField(read_only=True)
-
-    problem = serializers.SerializerMethodField(many=True)
+    problems = serializers.SerializerMethodField()
 
     class Meta:
         model = Topic
@@ -42,13 +41,13 @@ class TopicSerializer(serializers.ModelSerializer):
             "topic_type",
             "is_code",
             "order",
-            "problem",
+            "problems",
         )
 
-    def get_problem(self, obj):
-        if obj.topic_type == "code" and hasattr(obj, "problem"):
-            return ProblemSerializer(obj.problem).data
-        return None
+    def get_problems(self, obj):
+        if obj.topic_type == "code":
+            return ProblemSerializer(obj.problems.all(), many=True).data
+        return []
 class BuyCourseSerializer(serializers.Serializer):
     course_id = serializers.UUIDField()
 
