@@ -46,7 +46,7 @@ class TopicSerializer(serializers.ModelSerializer):
 
     def get_problems(self, obj):
         if obj.topic_type == "code":
-            return ProblemSerializer(obj.problems.all(), many=True).data
+            return ProblemSerializer(obj.problem.all(), many=True).data
         return []
 class BuyCourseSerializer(serializers.Serializer):
     course_id = serializers.UUIDField()
